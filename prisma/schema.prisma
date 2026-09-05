@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  PARENT
+  STAFF
+}
+
+enum AbsenceStatus {
+  OPEN
+  CLAIMED
+  EXPIRED
+}
+
+model Family {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  name      String
+  role      Role      @default(PARENT)
+  createdAt DateTime  @default(now())
+  children  Child[]
+  absences  Absence[]
+  tokens    Token[]
+  claims    Claim[]
+}
+
+model Child {
+  id       String    @id @default(uuid())
+  name     String
+  familyId String
+  family   Family    @relation(fields: [familyId], references: [id])
+  absences Absence[]
+  claims   Claim[]
+}
+
+model Absence {
+  id        String        @id @default(uuid())
+  date      DateTime
+  familyId  String
+  family    Family        @relation(fields: [familyId], references: [id])
+  childId   String
+  child     Child         @relation(fields: [childId], references: [id])
+  status    AbsenceStatus @default(OPEN)
+  createdAt DateTime      @default(now())
+  claim     Claim?
+}
+
+model Token {
+  id        String    @id @default(uuid())
+  familyId  String
+  family    Family    @relation(fields: [familyId], references: [id])
+  issuedAt  DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+  claim     Claim?
+}
+
+model Claim {
+  id               String   @id @default(uuid())
+  absenceId        String   @unique
+  absence          Absence  @relation(fields: [absenceId], references: [id])
+  claimingFamilyId String
+  claimingFamily   Family   @relation(fields: [claimingFamilyId], references: [id])
+  claimingChildId  String
+  claimingChild    Child    @relation(fields: [claimingChildId], references: [id])
+  tokenId          String   @unique
+  token            Token    @relation(fields: [tokenId], references: [id])
+  claimedAt        DateTime @default(now())
+}
