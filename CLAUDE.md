@@ -6,6 +6,10 @@ This file lives at the project root so Claude Code always has full context witho
 
 A standalone app for Patti's Swim School where parents can report an upcoming absence, immediately earn a makeup token, and use that token to claim another family's open absence slot. Built separately from pssreports.com and pssmakeups.com, then linked as a tab/nav item on pattisswimschool.com once it's working, matching how those two apps are already set up.
 
+## Working conventions
+
+- **Commit and push after each feature is completed and verified, not at the end of a session.** Don't let multiple features accumulate uncommitted. One session had 53 files and 2,871 insertions land in a single commit because nothing had been committed since before the family management suite, the audit log, the visual redesign, and the Resend email integration were all built — four-plus features deep with no commit boundaries between any of them. The natural checkpoint is right after a feature is built, passes `tsc`/`eslint`/`next build` clean, and has been tested against real data — commit and push there, not later.
+
 ## Current build status (updated as of this session)
 
 Done and verified end-to-end:
