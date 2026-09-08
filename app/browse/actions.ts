@@ -2,9 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
-import { createClient } from "@/lib/supabase/server";
-import { getFamilyForUser } from "@/lib/family";
+import { requireActiveFamily } from "@/lib/family";
 import { prisma } from "@/lib/prisma";
+import { availableTokenWhere } from "@/lib/tokens";
+import {
+  sendClaimConfirmationEmail,
+  sendSlotClaimedNoticeEmail,
+  sendSlotClaimedStaffEmail,
+} from "@/lib/email";
 
 export type ClaimState = { error?: string };
 
@@ -15,20 +20,7 @@ export async function claimAbsence(
   _prevState: ClaimState,
   formData: FormData,
 ): Promise<ClaimState> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in");
-  }
-
-  const family = await getFamilyForUser(user);
-
-  if (!family) {
-    redirect("/onboarding");
-  }
+  const family = await requireActiveFamily();
 
   const absenceId = String(formData.get("absenceId") ?? "");
   const childId = String(formData.get("childId") ?? "");
@@ -44,6 +36,9 @@ export async function claimAbsence(
   }
 
   let claimedDate: Date;
+  let postingFamilyEmail: string;
+  let postingFamilyName: string;
+  let postingChildName: string;
 
   try {
     const claim = await prisma.$transaction(async (tx) => {
@@ -59,6 +54,7 @@ export async function claimAbsence(
           id: absenceId,
           status: "OPEN",
           familyId: { not: family.id },
+          family: { active: true },
         },
         data: { status: "CLAIMED" },
       });
@@ -68,11 +64,7 @@ export async function claimAbsence(
       }
 
       const token = await tx.token.findFirst({
-        where: {
-          familyId: family.id,
-          usedAt: null,
-          expiresAt: { gt: new Date() },
-        },
+        where: { familyId: family.id, ...availableTokenWhere(new Date()) },
         orderBy: { expiresAt: "asc" },
       });
 
@@ -81,9 +73,10 @@ export async function claimAbsence(
       }
 
       // Same compare-and-swap pattern, in case this family is claiming two
-      // slots at once with only one spendable token between them.
+      // slots at once with only one spendable token between them, or staff
+      // revokes this exact token in the split second between these calls.
       const usedToken = await tx.token.updateMany({
-        where: { id: token.id, usedAt: null },
+        where: { id: token.id, usedAt: null, revokedAt: null },
         data: { usedAt: new Date() },
       });
 
@@ -98,11 +91,22 @@ export async function claimAbsence(
           claimingChildId: child.id,
           tokenId: token.id,
         },
-        include: { absence: { select: { date: true } } },
+        include: {
+          absence: {
+            select: {
+              date: true,
+              family: { select: { email: true, name: true } },
+              child: { select: { name: true } },
+            },
+          },
+        },
       });
     });
 
     claimedDate = claim.absence.date;
+    postingFamilyEmail = claim.absence.family.email;
+    postingFamilyName = claim.absence.family.name;
+    postingChildName = claim.absence.child.name;
   } catch (err) {
     if (err instanceof SlotAlreadyClaimedError) {
       return { error: "This slot was just claimed by someone else." };
@@ -122,6 +126,40 @@ export async function claimAbsence(
     return {
       error: "Something went wrong claiming this slot. Please try again.",
     };
+  }
+
+  // Best-effort notifications — a Resend failure must never undo or fail a
+  // claim that already committed, so each send is isolated in its own
+  // try/catch and only logged on failure.
+  try {
+    await sendClaimConfirmationEmail({
+      to: family.email,
+      childName: child.name,
+      absenceDate: claimedDate,
+    });
+  } catch (err) {
+    console.error("Failed to send claim confirmation email:", err);
+  }
+
+  try {
+    await sendSlotClaimedNoticeEmail({
+      to: postingFamilyEmail,
+      absenceDate: claimedDate,
+    });
+  } catch (err) {
+    console.error("Failed to send slot claimed notice email:", err);
+  }
+
+  try {
+    await sendSlotClaimedStaffEmail({
+      postingFamilyName,
+      postingChildName,
+      claimingFamilyName: family.name,
+      claimingChildName: child.name,
+      absenceDate: claimedDate,
+    });
+  } catch (err) {
+    console.error("Failed to send slot claimed staff email:", err);
   }
 
   redirect(`/?claimed=1&slotDate=${encodeURIComponent(claimedDate.toISOString())}`);

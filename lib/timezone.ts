@@ -43,3 +43,15 @@ export function toPacificDateInputValue(date: Date): string {
 export function toPacificTimeInputValue(date: Date): string {
   return DateTime.fromJSDate(date).setZone(APP_TIME_ZONE).toFormat("HH:mm");
 }
+
+/**
+ * Hours from `earlier` to `later`, via Luxon rather than raw Date
+ * subtraction — keeps all date math in this app going through the same
+ * well-tested primitives instead of one-off arithmetic that's easy to get
+ * subtly wrong (see: the DST bug this app already hit once).
+ */
+export function hoursBetween(earlier: Date, later: Date): number {
+  return DateTime.fromJSDate(later)
+    .setZone(APP_TIME_ZONE)
+    .diff(DateTime.fromJSDate(earlier).setZone(APP_TIME_ZONE), "hours").hours;
+}

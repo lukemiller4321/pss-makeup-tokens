@@ -20,15 +20,18 @@ enum AbsenceStatus {
 }
 
 model Family {
-  id        String    @id @default(uuid())
-  email     String    @unique
-  name      String
-  role      Role      @default(PARENT)
-  createdAt DateTime  @default(now())
-  children  Child[]
-  absences  Absence[]
-  tokens    Token[]
-  claims    Claim[]
+  id             String     @id @default(uuid())
+  email          String     @unique
+  name           String
+  role           Role       @default(PARENT)
+  active         Boolean    @default(true)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @default(now()) @updatedAt
+  children       Child[]
+  absences       Absence[]
+  tokens         Token[]
+  claims         Claim[]
+  staffAuditLogs AuditLog[]
 }
 
 model Child {
@@ -53,13 +56,17 @@ model Absence {
 }
 
 model Token {
-  id        String    @id @default(uuid())
-  familyId  String
-  family    Family    @relation(fields: [familyId], references: [id])
-  issuedAt  DateTime  @default(now())
-  expiresAt DateTime
-  usedAt    DateTime?
-  claim     Claim?
+  id             String    @id @default(uuid())
+  familyId       String
+  family         Family    @relation(fields: [familyId], references: [id])
+  issuedAt       DateTime  @default(now())
+  expiresAt      DateTime
+  usedAt         DateTime?
+  revokedAt      DateTime?
+  note           String?
+  reminderSentAt DateTime?
+  updatedAt      DateTime  @default(now()) @updatedAt
+  claim          Claim?
 }
 
 model Claim {
@@ -73,4 +80,20 @@ model Claim {
   tokenId          String   @unique
   token            Token    @relation(fields: [tokenId], references: [id])
   claimedAt        DateTime @default(now())
+}
+
+// targetType/targetId always identify the Family the action affected (the
+// entity every family-detail activity log query needs), even when the
+// literal row mutated was a Token or Absence — those specifics go in
+// `details` instead, since e.g. a deleted Absence can't be looked up
+// afterward to recover which family it belonged to.
+model AuditLog {
+  id            String   @id @default(uuid())
+  staffFamilyId String
+  staffFamily   Family   @relation(fields: [staffFamilyId], references: [id])
+  action        String
+  targetType    String
+  targetId      String
+  details       String?
+  createdAt     DateTime @default(now())
 }

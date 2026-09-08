@@ -1,50 +1,34 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getFamilyForUser } from "@/lib/family";
+import { requireActiveFamily } from "@/lib/family";
 import { prisma } from "@/lib/prisma";
-import { formatPacificDate, formatPacificTime } from "@/lib/timezone";
+import { formatPacificDate, formatPacificTime, hoursBetween } from "@/lib/timezone";
+import { getTokenStatus, type TokenStatus } from "@/lib/tokens";
+import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge";
+import { ReleaseClaimForm } from "./release-claim-form";
+import { RELEASE_CUTOFF_HOURS } from "@/lib/release-claim";
+import {
+  btnGhost,
+  mutedText,
+  pageInner,
+  pageTitle,
+  pageWrap,
+  table,
+  tableWrap,
+  td,
+  th,
+  theadRow,
+  tr,
+} from "@/lib/ui";
 
-type TokenStatus = "Available" | "Used" | "Expired";
-
-function getTokenStatus(
-  token: { usedAt: Date | null; expiresAt: Date },
-  now: Date,
-): TokenStatus {
-  if (token.usedAt) {
-    return "Used";
-  }
-
-  if (token.expiresAt < now) {
-    return "Expired";
-  }
-
-  return "Available";
-}
-
-const statusStyles: Record<TokenStatus, string> = {
-  Available:
-    "border-green-300 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200",
-  Used: "border-zinc-300 bg-zinc-50 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300",
-  Expired:
-    "border-red-300 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200",
+const statusTones: Record<TokenStatus, BadgeTone> = {
+  Available: "green",
+  Used: "gray",
+  Revoked: "amber",
+  Expired: "red",
 };
 
 export default async function TokensPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in");
-  }
-
-  const family = await getFamilyForUser(user);
-
-  if (!family) {
-    redirect("/onboarding");
-  }
+  const family = await requireActiveFamily();
 
   const tokens = await prisma.token.findMany({
     where: { familyId: family.id },
@@ -52,6 +36,7 @@ export default async function TokensPage() {
     include: {
       claim: {
         select: {
+          id: true,
           claimingChild: { select: { name: true } },
           absence: { select: { date: true } },
         },
@@ -64,72 +49,88 @@ export default async function TokensPage() {
   const counts = {
     Available: statuses.filter((s) => s === "Available").length,
     Used: statuses.filter((s) => s === "Used").length,
+    Revoked: statuses.filter((s) => s === "Revoked").length,
     Expired: statuses.filter((s) => s === "Expired").length,
   };
 
   return (
-    <div className="flex flex-1 flex-col items-center p-8">
-      <div className="flex w-full max-w-2xl flex-col gap-4">
+    <div className={pageWrap}>
+      <div className={`w-full max-w-2xl ${pageInner}`}>
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Your tokens</h1>
-          <Link href="/" className="text-sm underline">
+          <h1 className={pageTitle}>Your tokens</h1>
+          <Link href="/" className={btnGhost}>
             Back home
           </Link>
         </div>
 
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          Available: {counts.Available} · Used: {counts.Used} · Expired:{" "}
-          {counts.Expired}
+        <p className={mutedText}>
+          Available: {counts.Available} · Used: {counts.Used} · Revoked:{" "}
+          {counts.Revoked} · Expired: {counts.Expired}
         </p>
 
         {tokens.length === 0 ? (
-          <p className="text-zinc-600 dark:text-zinc-400">
+          <p className={mutedText}>
             No tokens yet — report an absence to earn one.
           </p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-zinc-300 dark:border-zinc-700">
-                <th className="py-2">Issued</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Expires (Pacific)</th>
-                <th className="py-2">Used on</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tokens.map((token, index) => {
-                const status = statuses[index];
+          <div className={tableWrap}>
+            <table className={table}>
+              <thead>
+                <tr className={theadRow}>
+                  <th className={th}>Issued</th>
+                  <th className={th}>Status</th>
+                  <th className={th}>Expires (Pacific)</th>
+                  <th className={th}>Used on</th>
+                  <th className={th}>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tokens.map((token, index) => {
+                  const status = statuses[index];
+                  const canReleaseOnline =
+                    status === "Used" &&
+                    token.claim &&
+                    hoursBetween(now, token.claim.absence.date) >
+                      RELEASE_CUTOFF_HOURS;
 
-                return (
-                  <tr
-                    key={token.id}
-                    className="border-b border-zinc-200 dark:border-zinc-800"
-                  >
-                    <td className="py-2">
-                      {formatPacificDate(token.issuedAt)}
-                    </td>
-                    <td className="py-2">
-                      <span
-                        className={`rounded border px-2 py-0.5 text-xs ${statusStyles[status]}`}
-                      >
-                        {status}
-                      </span>
-                    </td>
-                    <td className="py-2">
-                      {formatPacificDate(token.expiresAt)}
-                    </td>
-                    <td className="py-2">
-                      {token.claim
-                        ? `${token.claim.claimingChild.name} — ${formatPacificDate(
-                            token.claim.absence.date,
-                          )} at ${formatPacificTime(token.claim.absence.date)} PT`
-                        : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={token.id} className={tr}>
+                      <td className={td}>
+                        {formatPacificDate(token.issuedAt)}
+                      </td>
+                      <td className={td}>
+                        <StatusBadge label={status} tone={statusTones[status]} />
+                      </td>
+                      <td className={td}>
+                        {formatPacificDate(token.expiresAt)}
+                      </td>
+                      <td className={td}>
+                        {token.claim
+                          ? `${token.claim.claimingChild.name} — ${formatPacificDate(
+                              token.claim.absence.date,
+                            )} at ${formatPacificTime(token.claim.absence.date)} PT`
+                          : "—"}
+                      </td>
+                      <td className={td}>
+                        {status === "Used" && token.claim ? (
+                          canReleaseOnline ? (
+                            <ReleaseClaimForm claimId={token.claim.id} />
+                          ) : (
+                            <span className="text-xs text-gray-500">
+                              Too close to the lesson to release online —
+                              contact the school directly.
+                            </span>
+                          )
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

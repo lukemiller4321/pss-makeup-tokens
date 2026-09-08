@@ -1,8 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getFamilyForUser } from "@/lib/family";
+import { requireActiveFamily } from "@/lib/family";
 import { combinePacificDateTime } from "@/lib/timezone";
 import { createAbsenceWithToken } from "@/lib/report-absence";
 
@@ -12,20 +11,7 @@ export async function reportAbsence(
   _prevState: ReportAbsenceState,
   formData: FormData,
 ): Promise<ReportAbsenceState> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in");
-  }
-
-  const family = await getFamilyForUser(user);
-
-  if (!family) {
-    redirect("/onboarding");
-  }
+  const family = await requireActiveFamily();
 
   const childId = String(formData.get("childId") ?? "");
   const date = String(formData.get("date") ?? "");
@@ -47,13 +33,17 @@ export async function reportAbsence(
     return { error: "Enter a valid date and time." };
   }
 
-  const { token } = await createAbsenceWithToken({
+  const { token, tokenIssued } = await createAbsenceWithToken({
     familyId: family.id,
     childId: child.id,
     date: absenceDate,
   });
 
-  redirect(
-    `/?reported=1&tokenExpires=${encodeURIComponent(token.expiresAt.toISOString())}`,
-  );
+  if (tokenIssued && token) {
+    redirect(
+      `/?reported=1&tokenIssued=1&tokenExpires=${encodeURIComponent(token.expiresAt.toISOString())}`,
+    );
+  }
+
+  redirect("/?reported=1&tokenIssued=0");
 }

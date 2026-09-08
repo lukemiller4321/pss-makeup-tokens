@@ -2,6 +2,13 @@
 
 import { useActionState } from "react";
 import { updateAbsence, type EditAbsenceState } from "../actions";
+import {
+  btnPrimary,
+  errorText,
+  fieldGroup,
+  inputBase,
+  labelBase,
+} from "@/lib/ui";
 
 const initialState: EditAbsenceState = {};
 
@@ -23,39 +30,39 @@ export function EditAbsenceForm({
     <form action={formAction} className="flex flex-col gap-4">
       <input type="hidden" name="id" value={absenceId} />
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">Date</span>
+      <div className={fieldGroup}>
+        <label htmlFor="date" className={labelBase}>
+          Date
+        </label>
         <input
+          id="date"
           type="date"
           name="date"
           required
           defaultValue={defaultDate}
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+      <div className={fieldGroup}>
+        <label htmlFor="time" className={labelBase}>
           Time (Pacific)
-        </span>
+        </label>
         <input
+          id="time"
           type="time"
           name="time"
           required
           defaultValue={defaultTime}
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50 dark:bg-white dark:text-black"
-      >
+      <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Saving..." : "Save changes"}
       </button>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className={errorText}>{state.error}</p>}
     </form>
   );
 }

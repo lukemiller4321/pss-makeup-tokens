@@ -1,41 +1,36 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getFamilyForUser } from "@/lib/family";
+import { requireActiveFamily } from "@/lib/family";
 import { prisma } from "@/lib/prisma";
 import { formatPacificDate, formatPacificTime } from "@/lib/timezone";
+import { availableTokenWhere } from "@/lib/tokens";
+import { MINIMUM_NOTICE_HOURS } from "@/lib/report-absence";
+import {
+  alertSuccess,
+  btnPrimary,
+  btnSecondary,
+  card,
+  mutedText,
+  pageInner,
+  pageTitle,
+  pageWrap,
+} from "@/lib/ui";
 
 export default async function Home({ searchParams }: PageProps<"/">) {
   const params = await searchParams;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in");
-  }
-
-  const family = await getFamilyForUser(user);
-
-  if (!family) {
-    redirect("/onboarding");
-  }
+  const family = await requireActiveFamily();
 
   if (family.role === "STAFF") {
     redirect("/admin");
   }
 
   const activeTokenCount = await prisma.token.count({
-    where: {
-      familyId: family.id,
-      usedAt: null,
-      expiresAt: { gt: new Date() },
-    },
+    where: { familyId: family.id, ...availableTokenWhere(new Date()) },
   });
 
   const reported = params.reported === "1";
+  const tokenIssuedParam = params.tokenIssued === "1";
   const tokenExpiresParam =
     typeof params.tokenExpires === "string" ? params.tokenExpires : undefined;
   const claimed = params.claimed === "1";
@@ -43,76 +38,72 @@ export default async function Home({ searchParams }: PageProps<"/">) {
     typeof params.slotDate === "string" ? params.slotDate : undefined;
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-      {reported && (
-        <div className="rounded border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-          <p>Absence reported — you&apos;ve earned a makeup token.</p>
-          {tokenExpiresParam && (
-            <p>
-              Token expires {formatPacificDate(new Date(tokenExpiresParam))}
-            </p>
-          )}
+    <div className={pageWrap}>
+      <div className={`w-full max-w-2xl ${pageInner}`}>
+        {reported && (
+          <div className={alertSuccess}>
+            {tokenIssuedParam ? (
+              <>
+                <p>Absence reported — you&apos;ve earned a makeup token.</p>
+                {tokenExpiresParam && (
+                  <p>
+                    Token expires{" "}
+                    {formatPacificDate(new Date(tokenExpiresParam))}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p>
+                Absence reported. This was within {MINIMUM_NOTICE_HOURS / 24}{" "}
+                days of the lesson, so it didn&apos;t earn a makeup token.
+              </p>
+            )}
+          </div>
+        )}
+
+        {claimed && (
+          <div className={alertSuccess}>
+            <p>Slot claimed!</p>
+            {slotDateParam && (
+              <p>
+                {formatPacificDate(new Date(slotDateParam))} at{" "}
+                {formatPacificTime(new Date(slotDateParam))} PT
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className={card}>
+          <h1 className={pageTitle}>{family.name}</h1>
+          <p className={`mt-1 ${mutedText}`}>
+            {family.children.map((child) => child.name).join(", ") || "—"}
+          </p>
+
+          <div className="mt-6 flex items-center justify-between rounded-lg bg-brand-50 px-4 py-3">
+            <span className="text-sm font-medium text-brand-900">
+              Makeup tokens available
+            </span>
+            <span className="text-xl font-semibold text-brand-700">
+              {activeTokenCount}
+            </span>
+          </div>
+
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Link href="/absences/new" className={btnPrimary}>
+              Report an absence
+            </Link>
+            <Link href="/absences" className={btnSecondary}>
+              My absences
+            </Link>
+            <Link href="/browse" className={btnSecondary}>
+              Browse open slots
+            </Link>
+            <Link href="/tokens" className={btnSecondary}>
+              My tokens
+            </Link>
+          </div>
         </div>
-      )}
-
-      {claimed && (
-        <div className="rounded border border-green-300 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
-          <p>Slot claimed!</p>
-          {slotDateParam && (
-            <p>
-              {formatPacificDate(new Date(slotDateParam))} at{" "}
-              {formatPacificTime(new Date(slotDateParam))} PT
-            </p>
-          )}
-        </div>
-      )}
-
-      <h1 className="text-xl font-semibold">{family.name}</h1>
-      <ul className="text-zinc-600 dark:text-zinc-400">
-        {family.children.map((child) => (
-          <li key={child.id}>{child.name}</li>
-        ))}
-      </ul>
-
-      <p className="text-sm text-zinc-600 dark:text-zinc-400">
-        Makeup tokens available: {activeTokenCount}
-      </p>
-
-      <div className="flex gap-2">
-        <Link
-          href="/absences/new"
-          className="rounded bg-black px-3 py-2 text-white dark:bg-white dark:text-black"
-        >
-          Report an absence
-        </Link>
-        <Link
-          href="/absences"
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700"
-        >
-          My absences
-        </Link>
-        <Link
-          href="/browse"
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700"
-        >
-          Browse open slots
-        </Link>
-        <Link
-          href="/tokens"
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700"
-        >
-          My tokens
-        </Link>
       </div>
-
-      <form action="/auth/sign-out" method="post">
-        <button
-          type="submit"
-          className="rounded border border-zinc-300 px-3 py-2 text-sm dark:border-zinc-700"
-        >
-          Sign out
-        </button>
-      </form>
     </div>
   );
 }

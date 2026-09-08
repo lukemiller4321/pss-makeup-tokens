@@ -3,6 +3,7 @@
 import { Suspense, useState, type FormEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { btnPrimary, inputBase, labelBase, errorText } from "@/lib/ui";
 
 function SignInForm() {
   const searchParams = useSearchParams();
@@ -36,41 +37,54 @@ function SignInForm() {
     setStatus("sent");
   };
 
-  if (status === "sent") {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-        <h1 className="text-xl font-semibold">Check your email</h1>
-        <p className="text-zinc-600 dark:text-zinc-400">
-          We sent a magic link to {email}. Click it to sign in.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8">
-      <form
-        onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-4"
-      >
-        <h1 className="text-xl font-semibold">Sign in</h1>
-        <input
-          type="email"
-          required
-          placeholder="you@example.com"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
-        />
-        <button
-          type="submit"
-          disabled={status === "sending"}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50 dark:bg-white dark:text-black"
-        >
-          {status === "sending" ? "Sending..." : "Send magic link"}
-        </button>
-        {error && <p className="text-sm text-red-600">{error}</p>}
-      </form>
+    <div className="flex min-h-screen w-full flex-1 items-center justify-center bg-gradient-to-br from-brand-800 to-brand-900 p-4">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-xl">
+        <p className="text-xs font-semibold uppercase tracking-widest text-accent-500">
+          Parent Portal
+        </p>
+
+        {status === "sent" ? (
+          <div className="mt-3 flex flex-col gap-2">
+            <h1 className="text-xl font-semibold text-gray-900">
+              Check your email
+            </h1>
+            <p className="text-sm text-gray-600">
+              We sent a magic link to {email}. Click it to sign in.
+            </p>
+          </div>
+        ) : (
+          <>
+            <h1 className="mt-3 text-xl font-semibold text-gray-900">
+              Sign in
+            </h1>
+            <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="email" className={labelBase}>
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  className={inputBase}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={status === "sending"}
+                className={btnPrimary}
+              >
+                {status === "sending" ? "Sending..." : "Send magic link"}
+              </button>
+              {error && <p className={errorText}>{error}</p>}
+            </form>
+          </>
+        )}
+      </div>
     </div>
   );
 }

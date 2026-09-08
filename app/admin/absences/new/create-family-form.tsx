@@ -2,6 +2,13 @@
 
 import { useActionState } from "react";
 import { createFamilyAndLogAbsence, type LogAbsenceState } from "./actions";
+import {
+  btnPrimary,
+  errorText,
+  fieldGroup,
+  inputBase,
+  labelBase,
+} from "@/lib/ui";
 
 const initialState: LogAbsenceState = {};
 
@@ -12,76 +19,79 @@ export function CreateFamilyForm() {
   );
 
   return (
-    <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+    <form action={formAction} className="flex w-full flex-col gap-4">
+      <div className={fieldGroup}>
+        <label htmlFor="email" className={labelBase}>
           Parent email
-        </span>
+        </label>
         <input
+          id="email"
           type="email"
           name="email"
           required
           placeholder="parent@example.com"
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+      <div className={fieldGroup}>
+        <label htmlFor="familyName" className={labelBase}>
           Family name
-        </span>
+        </label>
         <input
+          id="familyName"
           type="text"
           name="familyName"
           required
           placeholder="Smith Family"
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+      <div className={fieldGroup}>
+        <label htmlFor="kidName" className={labelBase}>
           Kid name
-        </span>
+        </label>
         <input
+          id="kidName"
           type="text"
           name="kidName"
           required
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">Date</span>
+      <div className={fieldGroup}>
+        <label htmlFor="date" className={labelBase}>
+          Date
+        </label>
         <input
+          id="date"
           type="date"
           name="date"
           required
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+      <div className={fieldGroup}>
+        <label htmlFor="time" className={labelBase}>
           Time (Pacific)
-        </span>
+        </label>
         <input
+          id="time"
           type="time"
           name="time"
           required
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50 dark:bg-white dark:text-black"
-      >
+      <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Creating..." : "Create family and log absence"}
       </button>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className={errorText}>{state.error}</p>}
     </form>
   );
 }

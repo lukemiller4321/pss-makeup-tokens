@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getFamilyForUser } from "@/lib/family";
 import { OnboardingForm } from "./onboarding-form";
+import { card, pageWrapCentered } from "@/lib/ui";
 
 export default async function OnboardingPage() {
   const supabase = await createClient();
@@ -20,8 +21,10 @@ export default async function OnboardingPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-8">
-      <OnboardingForm />
+    <div className={pageWrapCentered}>
+      <div className={`w-full max-w-sm ${card}`}>
+        <OnboardingForm />
+      </div>
     </div>
   );
 }

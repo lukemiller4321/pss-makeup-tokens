@@ -1,25 +1,30 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getFamilyForUser } from "@/lib/family";
+import { requireActiveFamily } from "@/lib/family";
 import { prisma } from "@/lib/prisma";
 import { formatPacificDate, formatPacificTime } from "@/lib/timezone";
+import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge";
+import {
+  btnGhost,
+  mutedText,
+  pageInner,
+  pageTitle,
+  pageWrap,
+  table,
+  tableWrap,
+  td,
+  th,
+  theadRow,
+  tr,
+} from "@/lib/ui";
+
+const absenceStatusTone: Record<string, BadgeTone> = {
+  OPEN: "green",
+  CLAIMED: "gray",
+  EXPIRED: "red",
+};
 
 export default async function AbsencesPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/sign-in");
-  }
-
-  const family = await getFamilyForUser(user);
-
-  if (!family) {
-    redirect("/onboarding");
-  }
+  const family = await requireActiveFamily();
 
   const absences = await prisma.absence.findMany({
     where: { familyId: family.id },
@@ -28,46 +33,48 @@ export default async function AbsencesPage() {
   });
 
   return (
-    <div className="flex flex-1 flex-col items-center p-8">
-      <div className="flex w-full max-w-lg flex-col gap-4">
+    <div className={pageWrap}>
+      <div className={`w-full max-w-2xl ${pageInner}`}>
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Your absences</h1>
-          <Link href="/absences/new" className="text-sm underline">
+          <h1 className={pageTitle}>Your absences</h1>
+          <Link href="/absences/new" className={btnGhost}>
             Report an absence
           </Link>
         </div>
 
         {absences.length === 0 ? (
-          <p className="text-zinc-600 dark:text-zinc-400">
-            No absences reported yet.
-          </p>
+          <p className={mutedText}>No absences reported yet.</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-zinc-300 dark:border-zinc-700">
-                <th className="py-2">Kid</th>
-                <th className="py-2">Date</th>
-                <th className="py-2">Time (Pacific)</th>
-                <th className="py-2">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {absences.map((absence) => (
-                <tr
-                  key={absence.id}
-                  className="border-b border-zinc-200 dark:border-zinc-800"
-                >
-                  <td className="py-2">{absence.child.name}</td>
-                  <td className="py-2">{formatPacificDate(absence.date)}</td>
-                  <td className="py-2">{formatPacificTime(absence.date)}</td>
-                  <td className="py-2">{absence.status}</td>
+          <div className={tableWrap}>
+            <table className={table}>
+              <thead>
+                <tr className={theadRow}>
+                  <th className={th}>Kid</th>
+                  <th className={th}>Date</th>
+                  <th className={th}>Time (Pacific)</th>
+                  <th className={th}>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {absences.map((absence) => (
+                  <tr key={absence.id} className={tr}>
+                    <td className={td}>{absence.child.name}</td>
+                    <td className={td}>{formatPacificDate(absence.date)}</td>
+                    <td className={td}>{formatPacificTime(absence.date)}</td>
+                    <td className={td}>
+                      <StatusBadge
+                        label={absence.status}
+                        tone={absenceStatusTone[absence.status] ?? "gray"}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
 
-        <Link href="/" className="text-sm underline">
+        <Link href="/" className={btnGhost}>
           Back home
         </Link>
       </div>

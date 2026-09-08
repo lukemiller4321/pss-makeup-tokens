@@ -7,6 +7,14 @@ import {
   toPacificTimeInputValue,
 } from "@/lib/timezone";
 import { EditAbsenceForm } from "./edit-absence-form";
+import {
+  btnGhost,
+  card,
+  mutedText,
+  pageInner,
+  pageTitle,
+  pageWrapCentered,
+} from "@/lib/ui";
 
 export default async function EditAbsencePage({
   params,
@@ -28,31 +36,35 @@ export default async function EditAbsencePage({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center p-8">
-      <div className="flex w-full max-w-sm flex-col gap-4">
+    <div className={pageWrapCentered}>
+      <div className={`w-full max-w-sm ${pageInner}`}>
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Edit posting</h1>
-          <Link href="/admin" className="text-sm underline">
+          <h1 className={pageTitle}>Edit posting</h1>
+          <Link href="/admin" className={btnGhost}>
             Back to dashboard
           </Link>
         </div>
 
-        <p className="text-sm text-zinc-600 dark:text-zinc-400">
-          {absence.family.name} — {absence.child.name}
-        </p>
-
-        {absence.status !== "OPEN" ? (
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            This posting is {absence.status.toLowerCase()} and can only be
-            edited while it&apos;s open.
+        <div className={card}>
+          <p className={mutedText}>
+            {absence.family.name} — {absence.child.name}
           </p>
-        ) : (
-          <EditAbsenceForm
-            absenceId={absence.id}
-            defaultDate={toPacificDateInputValue(absence.date)}
-            defaultTime={toPacificTimeInputValue(absence.date)}
-          />
-        )}
+
+          {absence.status !== "OPEN" ? (
+            <p className={`mt-3 ${mutedText}`}>
+              This posting is {absence.status.toLowerCase()} and can only be
+              edited while it&apos;s open.
+            </p>
+          ) : (
+            <div className="mt-4">
+              <EditAbsenceForm
+                absenceId={absence.id}
+                defaultDate={toPacificDateInputValue(absence.date)}
+                defaultTime={toPacificTimeInputValue(absence.date)}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

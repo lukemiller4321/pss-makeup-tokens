@@ -9,6 +9,35 @@ import {
   whereForEffectiveStatus,
   type EffectiveAbsenceStatus,
 } from "@/lib/absence-status";
+import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge";
+import { MINIMUM_NOTICE_HOURS } from "@/lib/report-absence";
+import { ReleaseClaimForm } from "./release-claim-form";
+import {
+  alertSuccess,
+  btnGhostDestructiveSm,
+  btnGhostSm,
+  btnPrimary,
+  btnSecondary,
+  fieldGroup,
+  inputBase,
+  labelBase,
+  mutedText,
+  pageInner,
+  pageTitle,
+  table,
+  tableWrap,
+  td,
+  th,
+  theadRow,
+  tr,
+  pageWrap,
+} from "@/lib/ui";
+
+const absenceStatusTones: Record<EffectiveAbsenceStatus, BadgeTone> = {
+  OPEN: "green",
+  CLAIMED: "gray",
+  EXPIRED: "red",
+};
 
 export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   const params = await searchParams;
@@ -19,6 +48,9 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   const status = EFFECTIVE_ABSENCE_STATUSES.find((s) => s === statusParam);
   const q = typeof params.q === "string" ? params.q.trim() : "";
   const now = new Date();
+
+  const logged = params.logged === "1";
+  const tokenIssuedParam = params.tokenIssued === "1";
 
   const where: Prisma.AbsenceWhereInput = status
     ? whereForEffectiveStatus(status, now)
@@ -35,6 +67,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
       child: { select: { name: true } },
       claim: {
         select: {
+          id: true,
           claimingFamily: { select: { name: true } },
           claimingChild: { select: { name: true } },
         },
@@ -44,27 +77,43 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
   });
 
   return (
-    <div className="flex flex-1 flex-col items-center p-8">
-      <div className="flex w-full max-w-4xl flex-col gap-4">
+    <div className={pageWrap}>
+      <div className={`w-full max-w-4xl ${pageInner}`}>
+        {logged && (
+          <div className={alertSuccess}>
+            {tokenIssuedParam ? (
+              <p>Absence logged and a makeup token was issued.</p>
+            ) : (
+              <p>
+                Absence logged. This was within {MINIMUM_NOTICE_HOURS / 24}{" "}
+                days of the lesson, so no makeup token was issued.
+              </p>
+            )}
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
-          <h1 className="text-xl font-semibold">Admin — Absence postings</h1>
-          <Link
-            href="/admin/absences/new"
-            className="rounded bg-black px-3 py-2 text-sm text-white dark:bg-white dark:text-black"
-          >
-            Log an absence for a parent
-          </Link>
+          <h1 className={pageTitle}>Absence postings</h1>
+          <div className="flex gap-2">
+            <Link href="/admin/families" className={btnSecondary}>
+              Families
+            </Link>
+            <Link href="/admin/absences/new" className={btnPrimary}>
+              Log an absence for a parent
+            </Link>
+          </div>
         </div>
 
         <form method="get" className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+          <div className={fieldGroup}>
+            <label htmlFor="status" className={labelBase}>
               Status
-            </span>
+            </label>
             <select
+              id="status"
               name="status"
               defaultValue={status ?? ""}
-              className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+              className={inputBase}
             >
               <option value="">All</option>
               {EFFECTIVE_ABSENCE_STATUSES.map((option) => (
@@ -73,92 +122,94 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
 
-          <label className="flex flex-col gap-1">
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
+          <div className={fieldGroup}>
+            <label htmlFor="q" className={labelBase}>
               Family name
-            </span>
+            </label>
             <input
+              id="q"
               type="text"
               name="q"
               defaultValue={q}
               placeholder="Search by family name"
-              className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+              className={inputBase}
             />
-          </label>
+          </div>
 
-          <button
-            type="submit"
-            className="rounded bg-black px-3 py-2 text-sm text-white dark:bg-white dark:text-black"
-          >
+          <button type="submit" className={btnPrimary}>
             Apply
           </button>
         </form>
 
         {absences.length === 0 ? (
-          <p className="text-zinc-600 dark:text-zinc-400">
-            No postings match these filters.
-          </p>
+          <p className={mutedText}>No postings match these filters.</p>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-zinc-300 dark:border-zinc-700">
-                <th className="py-2">Family</th>
-                <th className="py-2">Kid</th>
-                <th className="py-2">Date</th>
-                <th className="py-2">Time (Pacific)</th>
-                <th className="py-2">Status</th>
-                <th className="py-2">Claimed by</th>
-                <th className="py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {absences.map((absence) => {
-                const effectiveStatus: EffectiveAbsenceStatus =
-                  getEffectiveAbsenceStatus(absence, now);
-                const canEdit = absence.status === "OPEN";
+          <div className={tableWrap}>
+            <table className={table}>
+              <thead>
+                <tr className={theadRow}>
+                  <th className={th}>Family</th>
+                  <th className={th}>Kid</th>
+                  <th className={th}>Date</th>
+                  <th className={th}>Time (Pacific)</th>
+                  <th className={th}>Status</th>
+                  <th className={th}>Claimed by</th>
+                  <th className={th}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {absences.map((absence) => {
+                  const effectiveStatus: EffectiveAbsenceStatus =
+                    getEffectiveAbsenceStatus(absence, now);
+                  const canEdit = absence.status === "OPEN";
 
-                return (
-                  <tr
-                    key={absence.id}
-                    className="border-b border-zinc-200 dark:border-zinc-800"
-                  >
-                    <td className="py-2">{absence.family.name}</td>
-                    <td className="py-2">{absence.child.name}</td>
-                    <td className="py-2">{formatPacificDate(absence.date)}</td>
-                    <td className="py-2">{formatPacificTime(absence.date)}</td>
-                    <td className="py-2">{effectiveStatus}</td>
-                    <td className="py-2">
-                      {absence.claim
-                        ? `${absence.claim.claimingFamily.name} — ${absence.claim.claimingChild.name}`
-                        : "—"}
-                    </td>
-                    <td className="py-2">
-                      {canEdit ? (
-                        <span className="flex gap-2">
-                          <Link
-                            href={`/admin/absences/${absence.id}/edit`}
-                            className="underline"
-                          >
-                            Edit
-                          </Link>
-                          <Link
-                            href={`/admin/absences/${absence.id}/delete`}
-                            className="underline"
-                          >
-                            Delete
-                          </Link>
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                  return (
+                    <tr key={absence.id} className={tr}>
+                      <td className={td}>{absence.family.name}</td>
+                      <td className={td}>{absence.child.name}</td>
+                      <td className={td}>{formatPacificDate(absence.date)}</td>
+                      <td className={td}>{formatPacificTime(absence.date)}</td>
+                      <td className={td}>
+                        <StatusBadge
+                          label={effectiveStatus}
+                          tone={absenceStatusTones[effectiveStatus]}
+                        />
+                      </td>
+                      <td className={td}>
+                        {absence.claim
+                          ? `${absence.claim.claimingFamily.name} — ${absence.claim.claimingChild.name}`
+                          : "—"}
+                      </td>
+                      <td className={td}>
+                        {canEdit ? (
+                          <span className="flex gap-3">
+                            <Link
+                              href={`/admin/absences/${absence.id}/edit`}
+                              className={btnGhostSm}
+                            >
+                              Edit
+                            </Link>
+                            <Link
+                              href={`/admin/absences/${absence.id}/delete`}
+                              className={btnGhostDestructiveSm}
+                            >
+                              Delete
+                            </Link>
+                          </span>
+                        ) : absence.status === "CLAIMED" && absence.claim ? (
+                          <ReleaseClaimForm claimId={absence.claim.id} />
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

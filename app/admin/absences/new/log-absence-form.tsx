@@ -2,6 +2,13 @@
 
 import { useActionState } from "react";
 import { logAbsenceForExistingFamily, type LogAbsenceState } from "./actions";
+import {
+  btnPrimary,
+  errorText,
+  fieldGroup,
+  inputBase,
+  labelBase,
+} from "@/lib/ui";
 
 const initialState: LogAbsenceState = {};
 
@@ -20,16 +27,19 @@ export function LogAbsenceForm({
   );
 
   return (
-    <form action={formAction} className="flex w-full max-w-sm flex-col gap-4">
+    <form action={formAction} className="flex w-full flex-col gap-4">
       <input type="hidden" name="familyId" value={familyId} />
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">Kid</span>
+      <div className={fieldGroup}>
+        <label htmlFor="childId" className={labelBase}>
+          Kid
+        </label>
         <select
+          id="childId"
           name="childId"
           required
           defaultValue=""
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         >
           <option value="" disabled>
             Select a kid
@@ -40,39 +50,39 @@ export function LogAbsenceForm({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">Date</span>
+      <div className={fieldGroup}>
+        <label htmlFor="date" className={labelBase}>
+          Date
+        </label>
         <input
+          id="date"
           type="date"
           name="date"
           required
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-sm text-zinc-600 dark:text-zinc-400">
+      <div className={fieldGroup}>
+        <label htmlFor="time" className={labelBase}>
           Time (Pacific)
-        </span>
+        </label>
         <input
+          id="time"
           type="time"
           name="time"
           required
-          className="rounded border border-zinc-300 px-3 py-2 dark:border-zinc-700 dark:bg-black"
+          className={inputBase}
         />
-      </label>
+      </div>
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50 dark:bg-white dark:text-black"
-      >
+      <button type="submit" disabled={pending} className={btnPrimary}>
         {pending ? "Logging..." : "Log absence"}
       </button>
 
-      {state.error && <p className="text-sm text-red-600">{state.error}</p>}
+      {state.error && <p className={errorText}>{state.error}</p>}
     </form>
   );
 }
