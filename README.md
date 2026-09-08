@@ -1,36 +1,37 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PSS Makeup Token Scheduler
 
-## Getting Started
+A production web app built for a local swim school (Patti's Swim School) that replaces a manual, phone-call-driven process for missed lesson makeups with a self-serve token system.
 
-First, run the development server:
+## The problem
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+When a kid misses a swim lesson, the makeup has always been resolved by hand: a parent calls in, staff track who missed what and who has an open slot, and matching absences to makeups is a spreadsheet-and-memory exercise. It doesn't scale and details get lost.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## How it works
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- A parent reports an upcoming absence (just a date and time, no schedule integration) and immediately earns a makeup token.
+- That open slot becomes visible to other families, who can claim it using one of their own tokens.
+- Tokens expire 30 days after being issued.
+- Staff get a full admin view: manage postings, issue or revoke tokens with a required audit note, merge duplicate family records, deactivate families who've left, and see both sides of every claim to resolve disputes.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Built with
 
-## Learn More
+- Next.js (App Router) + TypeScript
+- Supabase (Postgres + magic-link auth via `@supabase/ssr`)
+- Prisma ORM
+- Resend for transactional email
+- Tailwind CSS
+- Luxon for timezone-correct scheduling
 
-To learn more about Next.js, take a look at the following resources:
+## Notable engineering decisions
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- Claiming a slot is a single atomic transaction (a guarded conditional update), so two families can never successfully claim the same slot in a race. Verified against real concurrent transactions, not just reasoned through.
+- Every staff action (issuing or revoking a token, editing a posting, deactivating a family) writes to a per-family audit log inside the same transaction as the change itself, so a blocked or guarded action never gets logged as having happened.
+- All scheduling logic is anchored to Pacific time regardless of server or viewer timezone, since this is a single-location business. Implemented through the IANA tz database rather than a hardcoded offset, after an early bug where naive date construction silently used the server's local timezone.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Status
 
-## Deploy on Vercel
+Feature complete: auth, family onboarding, absence reporting and token issuance, browse/claim flow, token history, and the full admin dashboard are built and verified. Not yet deployed.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built independently with Claude Code, without a prior software engineering background.
