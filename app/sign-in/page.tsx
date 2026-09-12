@@ -8,12 +8,11 @@ import { btnPrimary, inputBase, labelBase, errorText } from "@/lib/ui";
 function SignInForm() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
-    "idle",
-  );
+  const [status, setStatus] = useState<"idle" | "sending" | "error">("idle");
   const [error, setError] = useState<string | null>(
     searchParams.get("error"),
   );
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -34,7 +33,8 @@ function SignInForm() {
       return;
     }
 
-    setStatus("sent");
+    setStatus("idle");
+    setModalOpen(true);
   };
 
   return (
@@ -44,47 +44,57 @@ function SignInForm() {
           Parent Portal
         </p>
 
-        {status === "sent" ? (
-          <div className="mt-3 flex flex-col gap-2">
-            <h1 className="text-xl font-semibold text-gray-900">
-              Check your email
-            </h1>
-            <p className="text-sm text-gray-600">
-              We sent a magic link to {email}. Click it to sign in.
-            </p>
+        <h1 className="mt-3 text-xl font-semibold text-gray-900">Sign in</h1>
+        <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="email" className={labelBase}>
+              Email
+            </label>
+            <input
+              id="email"
+              type="email"
+              required
+              placeholder="you@example.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              className={inputBase}
+            />
           </div>
-        ) : (
-          <>
-            <h1 className="mt-3 text-xl font-semibold text-gray-900">
-              Sign in
-            </h1>
-            <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-              <div className="flex flex-col gap-1">
-                <label htmlFor="email" className={labelBase}>
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  required
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  className={inputBase}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={status === "sending"}
-                className={btnPrimary}
-              >
-                {status === "sending" ? "Sending..." : "Send magic link"}
-              </button>
-              {error && <p className={errorText}>{error}</p>}
-            </form>
-          </>
-        )}
+          <button
+            type="submit"
+            disabled={status === "sending"}
+            className={btnPrimary}
+          >
+            {status === "sending" ? "Sending..." : "Send sign-in link"}
+          </button>
+          {error && <p className={errorText}>{error}</p>}
+        </form>
       </div>
+
+      {modalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setModalOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="text-sm text-gray-700">
+              A sign-in link has been sent to your email.
+            </p>
+            <button
+              type="button"
+              onClick={() => setModalOpen(false)}
+              className={`mt-4 ${btnPrimary}`}
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

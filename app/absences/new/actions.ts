@@ -33,7 +33,7 @@ export async function reportAbsence(
     return { error: "Enter a valid date and time." };
   }
 
-  const { token, tokenIssued } = await createAbsenceWithToken({
+  const { token, tokenIssued, reason } = await createAbsenceWithToken({
     familyId: family.id,
     childId: child.id,
     date: absenceDate,
@@ -45,5 +45,7 @@ export async function reportAbsence(
     );
   }
 
-  redirect("/?reported=1&tokenIssued=0");
+  redirect(
+    `/?reported=1&tokenIssued=0${reason ? `&reason=${reason}` : ""}`,
+  );
 }

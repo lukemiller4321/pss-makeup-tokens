@@ -7,6 +7,7 @@ import { releaseClaim } from "@/lib/release-claim";
 import {
   sendSlotReleasedNoticeEmail,
   sendClaimReleasedStaffEmail,
+  sendTokenForfeitedEmail,
 } from "@/lib/email";
 
 export type ReleaseClaimState = { error?: string };
@@ -54,9 +55,21 @@ export async function releaseClaimAsStaff(
       claimingChildName: released.claimingChild.name,
       absenceDate: released.absence.date,
       releasedBy: "staff",
+      forfeited: released.forfeited,
     });
   } catch (err) {
     console.error("Failed to send claim released staff email:", err);
+  }
+
+  if (released.forfeited) {
+    try {
+      await sendTokenForfeitedEmail({
+        to: released.claimingFamily.email,
+        absenceDate: released.absence.date,
+      });
+    } catch (err) {
+      console.error("Failed to send token forfeited email:", err);
+    }
   }
 
   revalidatePath("/admin");

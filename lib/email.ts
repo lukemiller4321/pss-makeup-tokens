@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { formatPacificDate, formatPacificTime } from "@/lib/timezone";
+import { FORFEIT_CUTOFF_HOURS } from "@/lib/release-claim";
 
 // Separate from the Supabase auth SMTP setup — that only covers magic-link
 // sign-in emails. This client sends transactional notifications directly.
@@ -127,6 +128,7 @@ export async function sendClaimReleasedStaffEmail(params: {
   claimingChildName: string;
   absenceDate: Date;
   releasedBy: "family" | "staff";
+  forfeited: boolean;
 }) {
   const date = formatPacificDate(params.absenceDate);
   const time = formatPacificTime(params.absenceDate);
@@ -134,12 +136,45 @@ export async function sendClaimReleasedStaffEmail(params: {
     params.releasedBy === "family"
       ? `${params.claimingFamilyName} released their own claim`
       : `Staff released ${params.claimingFamilyName}'s claim`;
+  const forfeitLine = params.forfeited
+    ? ` ${params.claimingFamilyName}'s token was forfeited, since this was within ${FORFEIT_CUTOFF_HOURS} hours of the lesson.`
+    : "";
 
   await sendEmail({
     from: FROM_EMAIL,
     to: STAFF_EMAIL,
     subject: "Claim released",
-    text: `${byLine} on ${params.postingFamilyName}'s (${params.postingChildName}) slot for ${date} at ${time} (Pacific). Originally claimed for ${params.claimingChildName}. The slot is open again.`,
+    text: `${byLine} on ${params.postingFamilyName}'s (${params.postingChildName}) slot for ${date} at ${time} (Pacific). Originally claimed for ${params.claimingChildName}. The slot is open again.${forfeitLine}`,
+  });
+}
+
+export async function sendTokenForfeitedEmail(params: {
+  to: string;
+  absenceDate: Date;
+}) {
+  const date = formatPacificDate(params.absenceDate);
+  const time = formatPacificTime(params.absenceDate);
+
+  await sendEmail({
+    from: FROM_EMAIL,
+    to: params.to,
+    subject: "Your makeup token was forfeited",
+    text: `Your makeup token was forfeited because the claim on the slot for ${date} at ${time} (Pacific) was released within ${FORFEIT_CUTOFF_HOURS} hours of the lesson.`,
+  });
+}
+
+export async function sendNewSlotAvailableEmail(params: {
+  to: string;
+  absenceDate: Date;
+}) {
+  const date = formatPacificDate(params.absenceDate);
+  const time = formatPacificTime(params.absenceDate);
+
+  await sendEmail({
+    from: FROM_EMAIL,
+    to: params.to,
+    subject: "A new makeup slot just opened",
+    text: `A new makeup slot opened up on ${date} at ${time} (Pacific). Log in to claim it with one of your makeup tokens before someone else does.`,
   });
 }
 

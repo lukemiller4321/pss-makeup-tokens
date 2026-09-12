@@ -5,12 +5,16 @@ import { requireStaffFamily } from "@/lib/staff";
 import { formatPacificDate, formatPacificTime } from "@/lib/timezone";
 import {
   EFFECTIVE_ABSENCE_STATUSES,
+  formatAbsenceStatusLabel,
   getEffectiveAbsenceStatus,
   whereForEffectiveStatus,
   type EffectiveAbsenceStatus,
 } from "@/lib/absence-status";
 import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge";
-import { MINIMUM_NOTICE_HOURS } from "@/lib/report-absence";
+import {
+  MINIMUM_NOTICE_HOURS,
+  MONTHLY_TOKEN_CAP_DAYS,
+} from "@/lib/report-absence";
 import { ReleaseClaimForm } from "./release-claim-form";
 import {
   alertSuccess,
@@ -51,6 +55,8 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
 
   const logged = params.logged === "1";
   const tokenIssuedParam = params.tokenIssued === "1";
+  const reasonParam =
+    typeof params.reason === "string" ? params.reason : undefined;
 
   const where: Prisma.AbsenceWhereInput = status
     ? whereForEffectiveStatus(status, now)
@@ -83,10 +89,16 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
           <div className={alertSuccess}>
             {tokenIssuedParam ? (
               <p>Absence logged and a makeup token was issued.</p>
+            ) : reasonParam === "MONTHLY_CAP" ? (
+              <p>
+                Absence logged. This family already earned a makeup token in
+                the last {MONTHLY_TOKEN_CAP_DAYS} days, so no token was
+                issued.
+              </p>
             ) : (
               <p>
-                Absence logged. This was within {MINIMUM_NOTICE_HOURS / 24}{" "}
-                days of the lesson, so no makeup token was issued.
+                Absence logged. This was within {MINIMUM_NOTICE_HOURS} hours
+                of the lesson, so no makeup token was issued.
               </p>
             )}
           </div>
@@ -173,7 +185,7 @@ export default async function AdminPage({ searchParams }: PageProps<"/admin">) {
                       <td className={td}>{formatPacificTime(absence.date)}</td>
                       <td className={td}>
                         <StatusBadge
-                          label={effectiveStatus}
+                          label={formatAbsenceStatusLabel(effectiveStatus)}
                           tone={absenceStatusTones[effectiveStatus]}
                         />
                       </td>

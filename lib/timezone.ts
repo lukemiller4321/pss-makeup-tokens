@@ -24,6 +24,18 @@ export function formatPacificDate(date: Date): string {
   return DateTime.fromJSDate(date).setZone(APP_TIME_ZONE).toFormat("MMM d, yyyy");
 }
 
+/**
+ * "Fri, Oct 3, 2026" — day-of-week variant used only on the Browse open
+ * slots list. Kept separate from formatPacificDate (used across five other
+ * pages) rather than adding the weekday there, so this addition can't
+ * affect any already-verified display.
+ */
+export function formatPacificDateWithWeekday(date: Date): string {
+  return DateTime.fromJSDate(date)
+    .setZone(APP_TIME_ZONE)
+    .toFormat("EEE, MMM d, yyyy");
+}
+
 export function formatPacificTime(date: Date): string {
   return DateTime.fromJSDate(date).setZone(APP_TIME_ZONE).toFormat("h:mm a");
 }

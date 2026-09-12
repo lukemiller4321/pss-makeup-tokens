@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { formatPacificDate, formatPacificTime } from "@/lib/timezone";
 import { StatusBadge, type BadgeTone } from "@/components/ui/status-badge";
 import {
+  formatAbsenceStatusLabel,
+  getEffectiveAbsenceStatus,
+  type EffectiveAbsenceStatus,
+} from "@/lib/absence-status";
+import {
   btnGhost,
   mutedText,
   pageInner,
@@ -17,7 +22,7 @@ import {
   tr,
 } from "@/lib/ui";
 
-const absenceStatusTone: Record<string, BadgeTone> = {
+const absenceStatusTone: Record<EffectiveAbsenceStatus, BadgeTone> = {
   OPEN: "green",
   CLAIMED: "gray",
   EXPIRED: "red",
@@ -31,6 +36,8 @@ export default async function AbsencesPage() {
     include: { child: true },
     orderBy: { date: "desc" },
   });
+
+  const now = new Date();
 
   return (
     <div className={pageWrap}>
@@ -56,19 +63,30 @@ export default async function AbsencesPage() {
                 </tr>
               </thead>
               <tbody>
-                {absences.map((absence) => (
-                  <tr key={absence.id} className={tr}>
-                    <td className={td}>{absence.child.name}</td>
-                    <td className={td}>{formatPacificDate(absence.date)}</td>
-                    <td className={td}>{formatPacificTime(absence.date)}</td>
-                    <td className={td}>
-                      <StatusBadge
-                        label={absence.status}
-                        tone={absenceStatusTone[absence.status] ?? "gray"}
-                      />
-                    </td>
-                  </tr>
-                ))}
+                {absences.map((absence) => {
+                  const effectiveStatus = getEffectiveAbsenceStatus(
+                    absence,
+                    now,
+                  );
+
+                  return (
+                    <tr key={absence.id} className={tr}>
+                      <td className={td}>{absence.child.name}</td>
+                      <td className={td}>
+                        {formatPacificDate(absence.date)}
+                      </td>
+                      <td className={td}>
+                        {formatPacificTime(absence.date)}
+                      </td>
+                      <td className={td}>
+                        <StatusBadge
+                          label={formatAbsenceStatusLabel(effectiveStatus)}
+                          tone={absenceStatusTone[effectiveStatus]}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

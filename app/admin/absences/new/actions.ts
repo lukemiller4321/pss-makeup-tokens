@@ -51,13 +51,15 @@ export async function logAbsenceForExistingFamily(
     return absenceDate;
   }
 
-  const { tokenIssued } = await createAbsenceWithToken({
+  const { tokenIssued, reason } = await createAbsenceWithToken({
     familyId,
     childId: child.id,
     date: absenceDate,
   });
 
-  redirect(`/admin?logged=1&tokenIssued=${tokenIssued ? "1" : "0"}`);
+  redirect(
+    `/admin?logged=1&tokenIssued=${tokenIssued ? "1" : "0"}${reason ? `&reason=${reason}` : ""}`,
+  );
 }
 
 export async function createFamilyAndLogAbsence(
@@ -106,11 +108,13 @@ export async function createFamilyAndLogAbsence(
     return { error: "Something went wrong creating the family." };
   }
 
-  const { tokenIssued } = await createAbsenceWithToken({
+  const { tokenIssued, reason } = await createAbsenceWithToken({
     familyId: family.id,
     childId: family.children[0].id,
     date: absenceDate,
   });
 
-  redirect(`/admin?logged=1&tokenIssued=${tokenIssued ? "1" : "0"}`);
+  redirect(
+    `/admin?logged=1&tokenIssued=${tokenIssued ? "1" : "0"}${reason ? `&reason=${reason}` : ""}`,
+  );
 }

@@ -25,6 +25,11 @@ export function getEffectiveAbsenceStatus(
   return absence.status;
 }
 
+/** Display label matching the casing convention used across the app (e.g. Token's Available/Used/Revoked/Expired) rather than the raw all-caps enum value. */
+export function formatAbsenceStatusLabel(status: EffectiveAbsenceStatus): string {
+  return status.charAt(0) + status.slice(1).toLowerCase();
+}
+
 export function whereForEffectiveStatus(
   effectiveStatus: EffectiveAbsenceStatus,
   now: Date,

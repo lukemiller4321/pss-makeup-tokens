@@ -63,6 +63,7 @@ model Token {
   expiresAt      DateTime
   usedAt         DateTime?
   revokedAt      DateTime?
+  forfeitedAt    DateTime?
   note           String?
   reminderSentAt DateTime?
   updatedAt      DateTime  @default(now()) @updatedAt

@@ -24,6 +24,7 @@ const statusTones: Record<TokenStatus, BadgeTone> = {
   Available: "green",
   Used: "gray",
   Revoked: "amber",
+  Forfeited: "red",
   Expired: "red",
 };
 

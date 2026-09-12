@@ -1,6 +1,11 @@
 import { Prisma } from "@prisma/client";
 
-export type TokenStatus = "Available" | "Used" | "Revoked" | "Expired";
+export type TokenStatus =
+  | "Available"
+  | "Used"
+  | "Revoked"
+  | "Forfeited"
+  | "Expired";
 
 /**
  * Single source of truth for the 30-day expiry math, so manual staff
@@ -18,15 +23,24 @@ export function tokenCreateArgs(
 }
 
 export function getTokenStatus(
-  token: { usedAt: Date | null; revokedAt: Date | null; expiresAt: Date },
+  token: {
+    usedAt: Date | null;
+    revokedAt: Date | null;
+    forfeitedAt: Date | null;
+    expiresAt: Date;
+  },
   now: Date,
 ): TokenStatus {
-  if (token.usedAt) {
-    return "Used";
-  }
-
   if (token.revokedAt) {
     return "Revoked";
+  }
+
+  if (token.forfeitedAt) {
+    return "Forfeited";
+  }
+
+  if (token.usedAt) {
+    return "Used";
   }
 
   if (token.expiresAt < now) {

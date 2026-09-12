@@ -75,7 +75,7 @@ export function ReportAbsenceForm({ kids }: { kids: Kid[] }) {
       </div>
 
       <p className="text-xs text-gray-500">
-        Absences reported within 3 days of the lesson will still be listed,
+        Absences reported within 12 hours of the lesson will still be listed,
         but won&apos;t earn a makeup token.
       </p>
 

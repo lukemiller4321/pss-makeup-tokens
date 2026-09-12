@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { claimAbsence, type ClaimState } from "./actions";
-import { formatPacificDate, formatPacificTime } from "@/lib/timezone";
+import { formatPacificDateWithWeekday, formatPacificTime } from "@/lib/timezone";
 import {
   btnPrimary,
   btnSecondary,
@@ -41,7 +41,7 @@ export function AbsenceListing({
       <div className="flex items-center justify-between">
         <div>
           <p className="font-medium text-gray-900">
-            {formatPacificDate(dateObj)}
+            {formatPacificDateWithWeekday(dateObj)}
           </p>
           <p className="text-sm text-gray-500">
             {formatPacificTime(dateObj)} PT

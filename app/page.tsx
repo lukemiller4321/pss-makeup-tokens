@@ -4,7 +4,10 @@ import { requireActiveFamily } from "@/lib/family";
 import { prisma } from "@/lib/prisma";
 import { formatPacificDate, formatPacificTime } from "@/lib/timezone";
 import { availableTokenWhere } from "@/lib/tokens";
-import { MINIMUM_NOTICE_HOURS } from "@/lib/report-absence";
+import {
+  MINIMUM_NOTICE_HOURS,
+  MONTHLY_TOKEN_CAP_DAYS,
+} from "@/lib/report-absence";
 import {
   alertSuccess,
   btnPrimary,
@@ -33,6 +36,8 @@ export default async function Home({ searchParams }: PageProps<"/">) {
   const tokenIssuedParam = params.tokenIssued === "1";
   const tokenExpiresParam =
     typeof params.tokenExpires === "string" ? params.tokenExpires : undefined;
+  const reasonParam =
+    typeof params.reason === "string" ? params.reason : undefined;
   const claimed = params.claimed === "1";
   const slotDateParam =
     typeof params.slotDate === "string" ? params.slotDate : undefined;
@@ -52,10 +57,16 @@ export default async function Home({ searchParams }: PageProps<"/">) {
                   </p>
                 )}
               </>
+            ) : reasonParam === "MONTHLY_CAP" ? (
+              <p>
+                Absence reported. Your family already earned a makeup token
+                in the last {MONTHLY_TOKEN_CAP_DAYS} days, so this one
+                didn&apos;t earn another.
+              </p>
             ) : (
               <p>
-                Absence reported. This was within {MINIMUM_NOTICE_HOURS / 24}{" "}
-                days of the lesson, so it didn&apos;t earn a makeup token.
+                Absence reported. This was within {MINIMUM_NOTICE_HOURS} hours
+                of the lesson, so it didn&apos;t earn a makeup token.
               </p>
             )}
           </div>
